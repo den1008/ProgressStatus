@@ -1,0 +1,26 @@
+{
+  "name": "den1008/progress-status",
+  "description": "Calculating progress",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Denis Golubykh",
+      "email": "den1008@bk.ru"
+    }
+  ],
+  "require": {
+    "php": ">=7.0",
+    "ext-mbstring": "*",
+    "phpunit/phpunit": "~6.0"
+  },
+  "autoload": {
+    "classmap": [
+      "src/",
+      "tests/"
+    ],
+    "psr-4": {
+      "den1008\\ProgressStatus\\": ""
+    }
+  }
+}
