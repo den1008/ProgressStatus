@@ -172,7 +172,16 @@ abstract class AbstractStatus
      * @param $stage
      * @return $this
      */
-    abstract public function sayStage($stage);
+    public function sayStage($stage){
+        $this->sayStageConcrete($stage);
+        return $this;
+    }
+
+    /**
+     * Рассказать о текущем прогрессе выполнения конкретному экзкмпляру статуса
+     * @param $msg
+     */
+    abstract protected function sayStageConcrete($msg);
 
     public function setTotal(int $total)
     {

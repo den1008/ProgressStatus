@@ -15,7 +15,7 @@ class StubStatus extends AbstractStatus
     {
     }
 
-    public function sayStage($stage)
+    public function sayStageConcrete($stage)
     {
     }
 }

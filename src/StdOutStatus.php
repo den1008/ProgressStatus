@@ -70,7 +70,7 @@ class StdOutStatus extends AbstractStatus
         $this->lastNested = $this->getNested();
     }
 
-    public function sayStage($stage)
+    public function sayStageConcrete($stage)
     {
         $this->sayConcrete($stage);
     }

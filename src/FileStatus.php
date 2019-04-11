@@ -58,7 +58,7 @@ class FileStatus extends AbstractStatus
         file_put_contents($this->file, $msg . PHP_EOL, FILE_APPEND);
     }
 
-    public function sayStage($stage)
+    public function sayStageConcrete($stage)
     {
         $this->sayConcrete($stage);
     }

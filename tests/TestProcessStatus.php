@@ -18,7 +18,7 @@ class TestProcessStatus extends AbstractStatus
         $this->countSay++;
     }
 
-    public function sayStage($stage)
+    public function sayStageConcrete($stage)
     {
     }
 }
