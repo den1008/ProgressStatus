@@ -2,7 +2,8 @@
 
 namespace den1008\ProgressStatus\tests;
 
-use den1008\ProgressStatus\classes\AbstractStatus;
+use den1008\ProgressStatus\StatusProcessor;
+use den1008\ProgressStatus\tests\classes\TestProcessStatusHandler;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -12,10 +13,29 @@ use PHPUnit\Framework\TestCase;
  */
 class ProcessStatusTest extends TestCase
 {
-    protected function getInstance(): TestProcessStatus
+    protected function getInstance(): StatusProcessor
     {
-        return new TestProcessStatus();
+        return new StatusProcessor(new TestProcessStatusHandler());
     }
+
+	/**
+	 * Тестирование вложенного подсчета прогресса
+	 * @throws \Exception
+	 */
+	public function testCreateStatusProcessor()
+	{
+		$p1 = new StatusProcessor(new TestProcessStatusHandler());
+		$this->assertEquals(1, count($p1->getHandlers()));
+
+		$p1 = new StatusProcessor([new TestProcessStatusHandler()]);
+		$this->assertEquals(1, count($p1->getHandlers()));
+
+		$p2 = new StatusProcessor([new TestProcessStatusHandler(), new TestProcessStatusHandler()]);
+		$this->assertEquals(2, count($p2->getHandlers()));
+
+		$p3 = new StatusProcessor();
+		$this->assertEquals(0, count($p3->getHandlers()));
+	}
 
     /**
      * Тестирование вложенного подсчета прогресса
@@ -23,53 +43,53 @@ class ProcessStatusTest extends TestCase
      */
     public function testWrappingAndProgress()
     {
-        $status = $this->getInstance()->setTotal(1000);
-        $this->assertEquals(0, $status->getNested());
+        $statusProcessor = $this->getInstance()->setTotal(1000);
+        $this->assertEquals(0, $statusProcessor->getNested());
 
         $lastCommonPercent = 0;
-        $funcCheckCommonPercent = function (AbstractStatus $status) use (
+        $funcCheckCommonPercent = function (StatusProcessor $statusProcessor) use (
             &
             $lastCommonPercent
         ) {
             $this->assertGreaterThanOrEqual($lastCommonPercent,
-                $status->getCommonPercent());
-            $lastCommonPercent = $status->getCommonPercent();
+                $statusProcessor->getCommonPercent());
+            $lastCommonPercent = $statusProcessor->getCommonPercent();
         };
 
-        $funcCheckCommonPercent($status);
-        $status->wrapSubProgram(function (AbstractStatus $status) use (
+        $funcCheckCommonPercent($statusProcessor);
+        $statusProcessor->wrapSubProgram(function (StatusProcessor $statusProcessor) use (
             $funcCheckCommonPercent
         ) {
-            $status->setTotal(500);
-            $funcCheckCommonPercent($status);
-            $this->assertEquals(1, $status->getNested());
+            $statusProcessor->setTotal(500);
+            $funcCheckCommonPercent($statusProcessor);
+            $this->assertEquals(1, $statusProcessor->getNested());
             for ($i = 1; $i <= 100; $i++) {
-                $status->increaseProgress();
-                $funcCheckCommonPercent($status);
-                $this->assertEquals($i, $status->getProgress());
-                $status->wrapSubProgram(function (AbstractStatus $status) use (
+                $statusProcessor->increaseProgress();
+                $funcCheckCommonPercent($statusProcessor);
+                $this->assertEquals($i, $statusProcessor->getProgress());
+                $statusProcessor->wrapSubProgram(function (StatusProcessor $statusProcessor) use (
                     $funcCheckCommonPercent
                 ) {
-                    $status->setTotal(30);
-                    $funcCheckCommonPercent($status);
-                    $this->assertEquals(2, $status->getNested());
+                    $statusProcessor->setTotal(30);
+                    $funcCheckCommonPercent($statusProcessor);
+                    $this->assertEquals(2, $statusProcessor->getNested());
                     for ($i = 1; $i <= 30; $i++) {
-                        $status->setProgress($i);
-                        $funcCheckCommonPercent($status);
-                        $this->assertEquals($i, $status->getProgress());
+                        $statusProcessor->setProgress($i);
+                        $funcCheckCommonPercent($statusProcessor);
+                        $this->assertEquals($i, $statusProcessor->getProgress());
                     }
-                    $this->assertEquals(30, $status->getTotal());
+                    $this->assertEquals(30, $statusProcessor->getTotal());
                 }, $i);
-                $funcCheckCommonPercent($status);
-                $this->assertEquals(1, $status->getNested());
-                $this->assertEquals(500, $status->getTotal());
-                $this->assertEquals($i, $status->getProgress());
+                $funcCheckCommonPercent($statusProcessor);
+                $this->assertEquals(1, $statusProcessor->getNested());
+                $this->assertEquals(500, $statusProcessor->getTotal());
+                $this->assertEquals($i, $statusProcessor->getProgress());
             }
         }, 800);
-        $funcCheckCommonPercent($status);
-        $this->assertEquals(0, $status->getNested());
-        $this->assertEquals(1000, $status->getTotal());
-        $this->assertEquals(800, $status->getProgress());
+        $funcCheckCommonPercent($statusProcessor);
+        $this->assertEquals(0, $statusProcessor->getNested());
+        $this->assertEquals(1000, $statusProcessor->getTotal());
+        $this->assertEquals(800, $statusProcessor->getProgress());
 
     }
 
@@ -78,13 +98,13 @@ class ProcessStatusTest extends TestCase
      * @throws \Exception
      */
     public function testSetValidValues(){
-        $status = $this->getInstance()->setTotal(234)->setProgress(0);
-        $this->assertEquals(234, $status->getTotal());
-        $this->assertEquals(0, $status->getProgress());
+        $statusProcessor = $this->getInstance()->setTotal(234)->setProgress(0);
+        $this->assertEquals(234, $statusProcessor->getTotal());
+        $this->assertEquals(0, $statusProcessor->getProgress());
         $this->getInstance()->setTotal(234)->setProgress(234);
-        $status->setStepProcessingProgress(0);
-        $status->setStepProcessingProgress(34);
-        $status->setStepProcessingProgress(100);
+        $statusProcessor->setStepProcessingProgress(0);
+        $statusProcessor->setStepProcessingProgress(34);
+        $statusProcessor->setStepProcessingProgress(100);
     }
 
     /**
@@ -94,69 +114,69 @@ class ProcessStatusTest extends TestCase
     public function testSetInvalidTotalAndProgress()
     {
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance();
+            $statusProcessor = $this->getInstance();
             //Ошибка, отрицательный максимальный прогресс
-            $status->setTotal(-1);
+            $statusProcessor->setTotal(-1);
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance();
+            $statusProcessor = $this->getInstance();
             //Ошибка, 0 максимальный прогресс
-            $status->setTotal(0);
+            $statusProcessor->setTotal(0);
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance();
+            $statusProcessor = $this->getInstance();
             //Ошибка, не указан максимальный прогресс
-            $status->getCommonPercent();
+            $statusProcessor->getCommonPercent();
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance();
+            $statusProcessor = $this->getInstance();
             //Ошибка, не указан максимальный прогресс
-            $status->setProgress(3);
+            $statusProcessor->setProgress(3);
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance();
+            $statusProcessor = $this->getInstance();
             //Ошибка, не указан максимальный прогресс
-            $status->increaseProgress();
+            $statusProcessor->increaseProgress();
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance();
+            $statusProcessor = $this->getInstance();
             //Ошибка, не указан максимальный прогресс
-            $status->clearProgress();
+            $statusProcessor->clearProgress();
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance()->setTotal(100);
+            $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, указан отрицательный шаг
-            $status->increaseProgress(-1);
+            $statusProcessor->increaseProgress(-1);
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance()->setTotal(100);
+            $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, указан отрицательный прогресс
-            $status->setProgress(-1);
+            $statusProcessor->setProgress(-1);
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance()->setTotal(100);
+            $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, прогресс не может превосходить максимальное значение
-            $status->setProgress(101);
+            $statusProcessor->setProgress(101);
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance()->setTotal(100);
+            $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, шаг обработки сообщений должен быть в диапазоне от 0 до 100
-            $status->setStepProcessingProgress(101);
+            $statusProcessor->setStepProcessingProgress(101);
         });
 
         $this->expectThrowable(\Exception::class, function () {
-            $status = $this->getInstance()->setTotal(100);
+            $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, шаг обработки сообщений должен быть в диапазоне от 0 до 100
-            $status->setStepProcessingProgress(-1);
+            $statusProcessor->setStepProcessingProgress(-1);
         });
     }
 
@@ -166,11 +186,11 @@ class ProcessStatusTest extends TestCase
      */
     public function testClearProgress()
     {
-        $status = $this->getInstance()->setTotal(1000)->setProgress(59);
+        $statusProcessor = $this->getInstance()->setTotal(1000)->setProgress(59);
 
-        $status->clearProgress();
-        $this->assertEquals(0, $status->getProgress());
-        $this->assertEquals(0, $status->getPercent());
+        $statusProcessor->clearProgress();
+        $this->assertEquals(0, $statusProcessor->getProgress());
+        $this->assertEquals(0, $statusProcessor->getPercent());
     }
 
     /**
@@ -179,18 +199,18 @@ class ProcessStatusTest extends TestCase
      */
     public function testPercent()
     {
-        $status = $this->getInstance()->setTotal(50);
+        $statusProcessor = $this->getInstance()->setTotal(50);
 
         for ($i = 1; $i <= 10; $i++) {
-            $status->increaseProgress();
-            $this->assertEquals($i * 2, $status->getPercent());
+            $statusProcessor->increaseProgress();
+            $this->assertEquals($i * 2, $statusProcessor->getPercent());
         }
 
-        $status->wrapSubProgram(function (AbstractStatus $status) {
-            $status->setTotal(10);
+        $statusProcessor->wrapSubProgram(function (StatusProcessor $statusProcessor) {
+            $statusProcessor->setTotal(10);
             for ($i = 1; $i <= 10; $i++) {
-                $status->increaseProgress();
-                $this->assertEquals($i * 10, $status->getPercent());
+                $statusProcessor->increaseProgress();
+                $this->assertEquals($i * 10, $statusProcessor->getPercent());
             }
         }, 50);
     }
@@ -201,19 +221,23 @@ class ProcessStatusTest extends TestCase
      */
     public function testStepProcessingProgress()
     {
-        $status = $this->getInstance()->setTotal(50);
+        $statusProcessor = $this->getInstance()->setTotal(50);
+        $handler = new TestProcessStatusHandler();
+		$statusProcessor->addHandler($handler);
         for ($i = 1; $i <= 50; $i++) {
-            $status->increaseProgress()->say("E-хо-хо");
+            $statusProcessor->increaseProgress()->say("E-хо-хо");
         }
-        $this->assertEquals(50, $status->countSay);
+        $this->assertEquals(50, $handler->countSay);
 
 
-        $status = $this->getInstance()->setTotal(50);
-        $status->setStepProcessingProgress(10);
+        $statusProcessor = $this->getInstance()->setTotal(50);
+		$handler = new TestProcessStatusHandler();
+		$statusProcessor->addHandler($handler);
+        $statusProcessor->setStepProcessingProgress(10);
         for ($i = 1; $i <= 50; $i++) {
-            $status->increaseProgress()->say("E-хо-хо");
+            $statusProcessor->increaseProgress()->say("E-хо-хо");
         }
-        $this->assertEquals(10, $status->countSay);
+        $this->assertEquals(10, $handler->countSay);
     }
 
     /**
@@ -222,25 +246,25 @@ class ProcessStatusTest extends TestCase
      */
     public function testTime()
     {
-        $status = $this->getInstance()->setTotal(10);
+        $statusProcessor = $this->getInstance()->setTotal(10);
 
-        $lastTime = $status->getTimeStart();
+        $lastTime = $statusProcessor->getTimeStart();
         for ($i = 1; $i <= 10; $i++) {
             usleep(500);
-            $status->increaseProgress();
-            $this->assertTrue($status->getTimeStart() < $status->getTimeLast());
-            $this->assertTrue($lastTime < $status->getTimeLast());
-            $lastTime = $status->getTimeLast();
+            $statusProcessor->increaseProgress();
+            $this->assertTrue($statusProcessor->getTimeStart() < $statusProcessor->getTimeLast());
+            $this->assertTrue($lastTime < $statusProcessor->getTimeLast());
+            $lastTime = $statusProcessor->getTimeLast();
         }
 
-        $status = $this->getInstance()->setTotal(10);
+        $statusProcessor = $this->getInstance()->setTotal(10);
         for ($i = 1; $i <= 10; $i++) {
             usleep(500);
-            $status->setProgress($i);
+            $statusProcessor->setProgress($i);
 
-            $this->assertTrue($status->getTimeStart() < $status->getTimeLast());
-            $this->assertTrue($lastTime < $status->getTimeLast());
-            $lastTime = $status->getTimeLast();
+            $this->assertTrue($statusProcessor->getTimeStart() < $statusProcessor->getTimeLast());
+            $this->assertTrue($lastTime < $statusProcessor->getTimeLast());
+            $lastTime = $statusProcessor->getTimeLast();
         }
     }
 

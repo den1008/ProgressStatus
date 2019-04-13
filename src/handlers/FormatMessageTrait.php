@@ -1,7 +1,9 @@
 <?php
 
-namespace den1008\ProgressStatus\classes;
+namespace den1008\ProgressStatus\handlers;
 
+
+use den1008\ProgressStatus\StatusProcessor;
 
 /**
  * Trait FormatMessageTrait
@@ -12,6 +14,7 @@ trait FormatMessageTrait
 {
     /**
      * Форматирование сообщения
+     * @param StatusProcessor $processor
      * @param $msg
      * @param string $format Формат вывода
      * {%date%} - текущая дата
@@ -27,11 +30,8 @@ trait FormatMessageTrait
      *
      * @return mixed
      */
-    protected function formatMessage($msg, $format)
+    public function formatMessage(StatusProcessor $processor, $msg, $format)
     {
-        if (!($this instanceof AbstractStatus)) {
-            throw new \Exception("Данный trait может быть использован только с AbstractStatus");
-        }
         $time = microtime(true);
 
         $this->replaceIfExist($format, '{%msg%}', function () use ($msg) {
@@ -43,24 +43,24 @@ trait FormatMessageTrait
         $this->replaceIfExist($format, '{%time%}', function () {
             return date("H:i:s");
         });
-        $this->replaceIfExist($format, '{%progress%}', function () {
-            return $this->progress;
+        $this->replaceIfExist($format, '{%progress%}', function () use ($processor){
+            return $processor->getProgress();
         });
-        $this->replaceIfExist($format, '{%total%}', function () {
-            return $this->total;
+        $this->replaceIfExist($format, '{%total%}', function () use ($processor){
+            return $processor->getTotal();
         });
-        $this->replaceIfExist($format, '{%percent%}', function () {
-            return sprintf('%4.1F', $this->getPercent());
+        $this->replaceIfExist($format, '{%percent%}', function () use ($processor){
+            return sprintf('%4.1F', $processor->getPercent());
         });
-        $this->replaceIfExist($format, '{%commonPercent%}', function () {
-            return sprintf('%4.1F', $this->getCommonPercent());
+        $this->replaceIfExist($format, '{%commonPercent%}', function () use ($processor){
+            return sprintf('%4.1F', $processor->getCommonPercent());
         });
-        $this->replaceIfExist($format, '{%totalTime%}', function () use ($time) {
-            $fromStart = $time - $this->timeStart;
+        $this->replaceIfExist($format, '{%totalTime%}', function () use ($processor, $time) {
+            $fromStart = $time - $processor->getTimeStart();
             return sprintf('%8.2F', $fromStart);
         });
-        $this->replaceIfExist($format, '{%stepTime%}', function () use ($time) {
-            $fromLast = $time - $this->timeLast;
+        $this->replaceIfExist($format, '{%stepTime%}', function () use ($processor, $time) {
+            $fromLast = $time - $processor->getTimeLast();
             return sprintf('%7.3F', $fromLast);
         });
 

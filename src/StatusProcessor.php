@@ -1,11 +1,11 @@
 <?php
 
-namespace den1008\ProgressStatus\classes;
+namespace den1008\ProgressStatus;
 
-abstract class AbstractStatus
+use den1008\ProgressStatus\handlers\IStatusHandler;
+
+class StatusProcessor
 {
-    use FormatMessageTrait;
-
     /** @var float Время начала работы в Unix timestamp with microseconds */
     protected $timeStart = 0;
 
@@ -27,6 +27,9 @@ abstract class AbstractStatus
     /** @var array Переменная для хранения данных о вложенных подпрограммах */
     private $subProcesses = [];
 
+    /** @var IStatusHandler[] */
+    protected $handlers = [];
+
     /**
      * @var int Шаг (в процентах) с которым обрабатываются сообщения попавшие в метод say(). Если 0, то обрабатываются все сообщения
      * Например, если $stepViewProgress == 10, то обрабатываться будут сообщения только с 10.12, 20.56, 30.98, ..., 100 процентами,
@@ -35,11 +38,34 @@ abstract class AbstractStatus
      */
     protected $stepProcessingProgress = 0;
 
-    public function __construct()
+	/**
+	 * StatusProcessor constructor.
+	 * @param IStatusHandler[]|IStatusHandler $handlers
+	 */
+    public function __construct($handlers = [])
     {
+    	if(!is_array($handlers)){
+    		$handlers = [$handlers];
+		}
+
         $this->timeStart = microtime(true);
         $this->timeLast = $this->timeStart;
+        foreach ($handlers as $handler){
+        	$this->addHandler($handler);
+		}
     }
+
+    public function addHandler(IStatusHandler $handler){
+    	$this->handlers[] = $handler;
+	}
+
+	/**
+	 * @return IStatusHandler[]
+	 */
+	public function getHandlers(): array
+	{
+		return $this->handlers;
+	}
 
     /**
      * @return int
@@ -152,20 +178,18 @@ abstract class AbstractStatus
             if ($this->percent > 0 &&
                 ($this->percent % $this->stepProcessingProgress) < 1 &&
                 (int)$this->lastPercent < (int)$this->percent) {
-                $this->sayConcrete($msg);
+				foreach ($this->handlers as $handler){
+					$handler->sayConcrete($this, $msg);
+				}
             }
             return $this;
         }
 
-        $this->sayConcrete($msg);
+        foreach ($this->handlers as $handler){
+			$handler->sayConcrete($this, $msg);
+		}
         return $this;
     }
-
-    /**
-     * Рассказать о текущем прогрессе выполнения конкретному экзкмпляру статуса
-     * @param $msg
-     */
-    abstract protected function sayConcrete($msg);
 
     /**
      * Рассказать о текущем этапе выполнения
@@ -173,15 +197,11 @@ abstract class AbstractStatus
      * @return $this
      */
     public function sayStage($stage){
-        $this->sayStageConcrete($stage);
+		foreach ($this->handlers as $handler){
+			$handler->sayStageConcrete($this, $stage);
+		}
         return $this;
     }
-
-    /**
-     * Рассказать о текущем прогрессе выполнения конкретному экзкмпляру статуса
-     * @param $msg
-     */
-    abstract protected function sayStageConcrete($msg);
 
     public function setTotal(int $total)
     {
