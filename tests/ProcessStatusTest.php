@@ -19,14 +19,6 @@ class ProcessStatusTest extends TestCase
         return new StatusProcessor(new TestProcessStatusHandler());
     }
 
-    public function testTest(){
-		$processor = new StatusProcessor([new StdOutStatusHandler()]);
-		$processor->setTotal(100);
-		for ($i = 0; $i < 100; $i++){
-			$processor->increaseProgress()->say('processing');
-		}
-	}
-
 	/**
 	 * Тестирование вложенного подсчета прогресса
 	 * @throws \Exception
