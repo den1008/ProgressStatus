@@ -1,10 +1,6 @@
 ProgressStatus
 ======
 
-Caution!
-
-    This is the documentation for ProgressStatus 0.x.
-
 ProgressStatus это простой в использовании компонент для расчета общего процента 
 выполнения задачи многомодульных программ на PHP.
 
