@@ -14,9 +14,7 @@ class FileStatusHandler implements IStatusHandler
     /** @var string Путь до файла */
     protected $file;
 
-    /**
-     * @var string Формат вывода
-     */
+    /** @var string Формат вывода */
     public $format = "[{%date%} {%time%}][{%commonPercent%}] {%msg%}";
 
     /**

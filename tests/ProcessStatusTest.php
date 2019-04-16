@@ -2,6 +2,7 @@
 
 namespace den1008\ProgressStatus\tests;
 
+use den1008\ProgressStatus\handlers\StdOutStatusHandler;
 use den1008\ProgressStatus\StatusProcessor;
 use den1008\ProgressStatus\tests\classes\TestProcessStatusHandler;
 use PHPUnit\Framework\TestCase;
@@ -17,6 +18,14 @@ class ProcessStatusTest extends TestCase
     {
         return new StatusProcessor(new TestProcessStatusHandler());
     }
+
+    public function testTest(){
+		$processor = new StatusProcessor([new StdOutStatusHandler()]);
+		$processor->setTotal(100);
+		for ($i = 0; $i < 100; $i++){
+			$processor->increaseProgress()->say('processing');
+		}
+	}
 
 	/**
 	 * Тестирование вложенного подсчета прогресса
