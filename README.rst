@@ -198,7 +198,7 @@ FileStatusHandler
    /** @var string Формат вывода */
    public $format = "[{%date%} {%time%}][{%commonPercent%}] {%msg%}";
 
-Для форматирования сообщений, как и в StdOutStatusHandler используется FormatMessageTrait (см. описание выше).
+Для форматирования сообщений, как и в *StdOutStatusHandler*, используется *FormatMessageTrait* (см. описание выше).
 
 Test
 ~~~~~~~~~~~~~~~~~
