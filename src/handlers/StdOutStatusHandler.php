@@ -1,16 +1,19 @@
 <?php
 
-namespace den1008\ProgressStatus;
+namespace den1008\ProgressStatus\handlers;
 
-use den1008\ProgressStatus\classes\AbstractStatus;
+use den1008\ProgressStatus\handlers\IStatusHandler;
+use den1008\ProgressStatus\StatusProcessor;
 
 /**
  * Класс вывода статуса в консоль
  *
  * @package app\components\processStatus
  */
-class StdOutStatus extends AbstractStatus
+class StdOutStatusHandler implements IStatusHandler
 {
+	use FormatMessageTrait;
+
     /** @var int Максимальная длина консольной строки */
     protected $maxStrLength = 120;
 
@@ -28,7 +31,6 @@ class StdOutStatus extends AbstractStatus
 
     public function __construct($hideNestedAfterDepth = 1)
     {
-        parent::__construct();
         $this->hideNestedAfterDepth = $hideNestedAfterDepth;
         if ($this->hideNestedAfterDepth == 0) {
             self::stdout(PHP_EOL);
@@ -50,46 +52,47 @@ class StdOutStatus extends AbstractStatus
         return $this;
     }
 
-    protected function sayConcrete($msg)
+    public function sayConcrete(StatusProcessor $processor, $msg)
     {
         if (empty($msg)) {
             return;
         }
 
         //Добавляем новую строку для однострочного (скрытого) прогресса
-        if ($this->getNested() >= $this->hideNestedAfterDepth
-            && $this->lastNested < $this->getNested()
+        if ($processor->getNested() >= $this->hideNestedAfterDepth
+            && $this->lastNested < $processor->getNested()
         ) {
             self::stdout(PHP_EOL);
         }
 
-        $msg = $this->formatMessageWithNested($msg);
+        $msg = $this->formatMessageWithNested($processor, $msg);
         $msg = $this->cutMessage($msg);
 
         self::stdout($msg . PHP_EOL);
-        $this->lastNested = $this->getNested();
+        $this->lastNested = $processor->getNested();
     }
 
-    public function sayStageConcrete($stage)
+    public function sayStageConcrete(StatusProcessor $processor, $stage)
     {
-        $this->sayConcrete($stage);
+        $this->sayConcrete($processor, $stage);
     }
 
     /**
      * Функция форматирования однострочного прогресса
+	 * @param StatusProcessor $processor
      * @param $msg
      * @return mixed
      * @throws \Exception
      */
-    protected function formatMessageWithNested($msg)
+    protected function formatMessageWithNested(StatusProcessor $processor, $msg)
     {
         $format = $this->mainFormat;
-        if ($this->getNested() >= $this->hideNestedAfterDepth) {
+        if ($processor->getNested() >= $this->hideNestedAfterDepth) {
             //Очистка строки и возврат курсора в начало
             $format = "\033[A\033[2K" . $this->hideFormat;
         }
 
-        return parent::formatMessage($msg, $format);
+        return $this->formatMessage($processor, $msg, $format);
     }
 
     /**

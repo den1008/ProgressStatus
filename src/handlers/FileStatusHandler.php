@@ -1,22 +1,20 @@
 <?php
 
-namespace den1008\ProgressStatus;
+namespace den1008\ProgressStatus\handlers;
 
-use den1008\ProgressStatus\classes\AbstractStatus;
+use den1008\ProgressStatus\StatusProcessor;
 
 /**
  * Класс вывода статуса в файл
- *
- * @package app\components\processStatus
  */
-class FileStatus extends AbstractStatus
+class FileStatusHandler implements IStatusHandler
 {
+	use FormatMessageTrait;
+
     /** @var string Путь до файла */
     protected $file;
 
-    /**
-     * @var string Формат вывода
-     */
+    /** @var string Формат вывода */
     public $format = "[{%date%} {%time%}][{%commonPercent%}] {%msg%}";
 
     /**
@@ -27,7 +25,6 @@ class FileStatus extends AbstractStatus
      */
     public function __construct($file, $clearFile = false)
     {
-        parent::__construct();
         $this->setFile($file);
         if ($clearFile) {
             file_put_contents($this->file, '');
@@ -47,19 +44,23 @@ class FileStatus extends AbstractStatus
         return $this;
     }
 
-    /** @param mixed $msg */
-    protected function sayConcrete($msg)
+	/**
+	 * @param StatusProcessor $processor
+	 * @param                 $msg
+	 * @throws \Exception
+	 */
+	public function sayConcrete(StatusProcessor $processor, $msg)
     {
         if (empty($msg)) {
             return;
         }
 
-        $msg = $this->formatMessage($msg, $this->format);
+		$msg =  $this->formatMessage($processor, $msg, $this->format);
         file_put_contents($this->file, $msg . PHP_EOL, FILE_APPEND);
     }
 
-    public function sayStageConcrete($stage)
-    {
-        $this->sayConcrete($stage);
-    }
+    public function sayStageConcrete(StatusProcessor $processor, $msg)
+	{
+		$this->sayConcrete($processor, $msg);
+	}
 }
