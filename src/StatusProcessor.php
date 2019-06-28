@@ -148,6 +148,9 @@ class StatusProcessor
      */
     public function wrapSubProgram(\Closure $func, $endProgress)
     {
+        if($this->total <= 0){
+            throw new \Exception("Максимальный прогресс внешней подпрограммы должен быть положительным числом больше 0");
+        }
         $context = [
             'total' => $this->total,
             'progress' => $this->progress,

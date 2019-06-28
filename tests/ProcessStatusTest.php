@@ -116,6 +116,14 @@ class ProcessStatusTest extends TestCase
     {
         $this->expectThrowable(\Exception::class, function () {
             $statusProcessor = $this->getInstance();
+            //Ошибка, обертка с нулевым исходным масимальным прогрессом
+            $statusProcessor->wrapSubProgram(function (StatusProcessor $processor) {
+                $processor->setTotal(100)->increaseProgress(1)->getCommonPercent();
+            }, 100);
+        });
+
+        $this->expectThrowable(\Exception::class, function () {
+            $statusProcessor = $this->getInstance();
             //Ошибка, отрицательный максимальный прогресс
             $statusProcessor->setTotal(-1);
         });
