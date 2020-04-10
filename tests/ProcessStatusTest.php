@@ -2,9 +2,10 @@
 
 namespace den1008\ProgressStatus\tests;
 
-use den1008\ProgressStatus\handlers\StdOutStatusHandler;
+use Closure;
 use den1008\ProgressStatus\StatusProcessor;
 use den1008\ProgressStatus\tests\classes\TestProcessStatusHandler;
+use Exception;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -21,7 +22,6 @@ class ProcessStatusTest extends TestCase
 
 	/**
 	 * Тестирование вложенного подсчета прогресса
-	 * @throws \Exception
 	 */
 	public function testCreateStatusProcessor()
 	{
@@ -40,7 +40,6 @@ class ProcessStatusTest extends TestCase
 
     /**
      * Тестирование вложенного подсчета прогресса
-     * @throws \Exception
      */
     public function testWrappingAndProgress()
     {
@@ -92,16 +91,36 @@ class ProcessStatusTest extends TestCase
         $this->assertEquals(1000, $statusProcessor->getTotal());
         $this->assertEquals(800, $statusProcessor->getProgress());
 
+        //Проверка обертки с нулевым общим количеством
+		$statusProcessor = $this->getInstance()->setTotal(0);
+		$statusProcessor->wrapSubProgram(function (StatusProcessor $processor) {
+			$this->assertEquals($processor->setTotal(100)->increaseProgress(1)->getCommonPercent(), 100);
+			$this->assertEquals($processor->setTotal(0)->getCommonPercent(), 100);
+			$this->assertEquals($processor->setProgress(0)->getPercent(), 100);
+		}, 100);
+		$this->assertEquals($statusProcessor->getCommonPercent(), 100);
+
+		//Проверка обертки с нулевым внутренним общим количеством
+		$statusProcessor = $this->getInstance()->setTotal(100);
+		$statusProcessor->wrapSubProgram(function (StatusProcessor $processor) {
+			$this->assertEquals($processor->setTotal(0)->getCommonPercent(), 50);
+			$this->assertEquals($processor->setProgress(0)->getPercent(), 100);
+		}, 50);
+		$this->assertEquals($statusProcessor->getCommonPercent(), 50);
     }
 
     /**
      * Тестирование установки валидных значений
-     * @throws \Exception
      */
     public function testSetValidValues(){
         $statusProcessor = $this->getInstance()->setTotal(234)->setProgress(0);
         $this->assertEquals(234, $statusProcessor->getTotal());
         $this->assertEquals(0, $statusProcessor->getProgress());
+		$statusProcessor = $this->getInstance()->setTotal(0)->setProgress(0);
+		$this->assertEquals(0, $statusProcessor->getTotal());
+		$this->assertEquals(100, $statusProcessor->getCommonPercent());
+		$this->assertEquals(100, $statusProcessor->getPercent());
+
         $this->getInstance()->setTotal(234)->setProgress(234);
         $statusProcessor->setStepProcessingProgress(0);
         $statusProcessor->setStepProcessingProgress(34);
@@ -110,79 +129,40 @@ class ProcessStatusTest extends TestCase
 
     /**
      * Тестирование установки невалидных значений
-     * @throws \Exception
      */
     public function testSetInvalidTotalAndProgress()
     {
-        $this->expectThrowable(\Exception::class, function () {
-            $statusProcessor = $this->getInstance();
-            //Ошибка, обертка с нулевым исходным масимальным прогрессом
-            $statusProcessor->wrapSubProgram(function (StatusProcessor $processor) {
-                $processor->setTotal(100)->increaseProgress(1)->getCommonPercent();
-            }, 100);
-        });
-
-        $this->expectThrowable(\Exception::class, function () {
+		$this->expectThrowable(Exception::class, function () {
             $statusProcessor = $this->getInstance();
             //Ошибка, отрицательный максимальный прогресс
             $statusProcessor->setTotal(-1);
         });
 
-        $this->expectThrowable(\Exception::class, function () {
-            $statusProcessor = $this->getInstance();
-            //Ошибка, 0 максимальный прогресс
-            $statusProcessor->setTotal(0);
-        });
-
-        $this->expectThrowable(\Exception::class, function () {
-            $statusProcessor = $this->getInstance();
-            //Ошибка, не указан максимальный прогресс
-            $statusProcessor->getCommonPercent();
-        });
-
-        $this->expectThrowable(\Exception::class, function () {
-            $statusProcessor = $this->getInstance();
-            //Ошибка, не указан максимальный прогресс
-            $statusProcessor->setProgress(3);
-        });
-
-        $this->expectThrowable(\Exception::class, function () {
-            $statusProcessor = $this->getInstance();
-            //Ошибка, не указан максимальный прогресс
-            $statusProcessor->increaseProgress();
-        });
-
-        $this->expectThrowable(\Exception::class, function () {
-            $statusProcessor = $this->getInstance();
-            //Ошибка, не указан максимальный прогресс
-            $statusProcessor->clearProgress();
-        });
-
-        $this->expectThrowable(\Exception::class, function () {
+        $this->expectThrowable(Exception::class, function () {
             $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, указан отрицательный шаг
             $statusProcessor->increaseProgress(-1);
         });
 
-        $this->expectThrowable(\Exception::class, function () {
+        $this->expectThrowable(Exception::class, function () {
             $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, указан отрицательный прогресс
             $statusProcessor->setProgress(-1);
         });
 
-        $this->expectThrowable(\Exception::class, function () {
+        $this->expectThrowable(Exception::class, function () {
             $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, прогресс не может превосходить максимальное значение
             $statusProcessor->setProgress(101);
         });
 
-        $this->expectThrowable(\Exception::class, function () {
+        $this->expectThrowable(Exception::class, function () {
             $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, шаг обработки сообщений должен быть в диапазоне от 0 до 100
             $statusProcessor->setStepProcessingProgress(101);
         });
 
-        $this->expectThrowable(\Exception::class, function () {
+        $this->expectThrowable(Exception::class, function () {
             $statusProcessor = $this->getInstance()->setTotal(100);
             //Ошибка, шаг обработки сообщений должен быть в диапазоне от 0 до 100
             $statusProcessor->setStepProcessingProgress(-1);
@@ -191,7 +171,6 @@ class ProcessStatusTest extends TestCase
 
     /**
      * Тестирование сброса прогресса выполнения
-     * @throws \Exception
      */
     public function testClearProgress()
     {
@@ -204,7 +183,6 @@ class ProcessStatusTest extends TestCase
 
     /**
      * Тестирование правильности подсчета процента выполнения
-     * @throws \Exception
      */
     public function testPercent()
     {
@@ -226,7 +204,6 @@ class ProcessStatusTest extends TestCase
 
     /**
      * Тестирование шага с которым обрабатываются сообщения попавшие в метод say()
-     * @throws \Exception
      */
     public function testStepProcessingProgress()
     {
@@ -251,7 +228,6 @@ class ProcessStatusTest extends TestCase
 
     /**
      * Тестирование правильности подсчета времени выполнения скрипта
-     * @throws \Exception
      */
     public function testTime()
     {
@@ -277,11 +253,11 @@ class ProcessStatusTest extends TestCase
         }
     }
 
-    protected function expectThrowable($exception, \Closure $func)
+    protected function expectThrowable($exception, Closure $func)
     {
         try {
             $func();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             if (get_class($e) != $exception) {
                 $this->fail("Expected $exception exception, but raised " . get_class($e));
             }
