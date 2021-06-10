@@ -207,4 +207,4 @@ Test
 
 .. code-block:: bash
 
-  sh vendor/bin/phpunit tests/
+  ./vendor/bin/phpunit tests/
